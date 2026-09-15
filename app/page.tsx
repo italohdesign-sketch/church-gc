@@ -1,69 +1,37 @@
 "use client";
 
-import { useState } from "react";
-import { BookOpen, CircleDollarSign, LayoutGrid, Megaphone, Mic2, MonitorPlay, Music2, Radio, Settings2, UserRound, Wifi } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { BookOpen, CircleDollarSign, LayoutGrid, Megaphone, MonitorPlay, Music2, Radio, Settings2, UserRound, Wifi, Plus, Search } from "lucide-react";
 
-const nav = [
-  ["Culto", Radio], ["GC", UserRound], ["Bíblia", BookOpen], ["Louvor", Music2],
-  ["Oferta", CircleDollarSign], ["Avisos", Megaphone], ["Biblioteca", LayoutGrid],
-] as const;
+type Item={type:string;title:string;detail:string;body?:string};
+const initial:Item[]=[
+ {type:"LOUVOR",title:"Bondade de Deus",detail:"Refrão",body:"Tua bondade me seguirá"},
+ {type:"BÍBLIA",title:"João 3:16",detail:"Texto de demonstração",body:"Insira aqui o texto bíblico licenciado ou fornecido pela igreja."},
+ {type:"GC",title:"Pr. Rafael Martins",detail:"Pastor convidado"},
+ {type:"OFERTA",title:"Dízimos e ofertas",detail:"PIX + QR Code",body:"chavepix@igreja.com"},
+ {type:"AVISO",title:"Conferência City",detail:"18–20 de setembro"}
+];
+const nav=[["Culto",Radio],["GC",UserRound],["Bíblia",BookOpen],["Louvor",Music2],["Oferta",CircleDollarSign],["Avisos",Megaphone],["Biblioteca",LayoutGrid]] as const;
 
-export default function Home() {
-  const [active, setActive] = useState("Culto");
-  const [live, setLive] = useState(false);
-  const [mode, setMode] = useState<"preparacao" | "culto">("preparacao");
-
-  return (
-    <main className="shell">
-      <aside className="sidebar">
-        <div className="brand"><span className="brandMark">c</span><strong>church gc</strong></div>
-        <nav>
-          {nav.map(([label, Icon]) => <button key={label} className={active === label ? "nav active" : "nav"} onClick={() => setActive(label)}><Icon size={18}/><span>{label}</span></button>)}
-        </nav>
-        <div className="sideBottom">
-          <button className="nav"><Settings2 size={18}/><span>Configurações</span></button>
-          <div className="connection"><span className="dot"/><div><strong>vMix conectado</strong><small>Transmissão 01</small></div></div>
-        </div>
-      </aside>
-
-      <section className="workspace">
-        <header>
-          <div><p className="eyebrow">CULTO DE DOMINGO</p><h1>{active}</h1></div>
-          <div className="headerActions"><span className="network"><Wifi size={15}/> Rede local</span><div className="mode"><button className={mode === "preparacao" ? "selected" : ""} onClick={() => setMode("preparacao")}>Preparação</button><button className={mode === "culto" ? "selected" : ""} onClick={() => setMode("culto")}>Modo culto</button></div></div>
-        </header>
-
-        <div className="contentGrid">
-          <section className="runPanel">
-            <div className="sectionTitle"><div><p className="eyebrow">ROTEIRO</p><h2>Próximos do culto</h2></div><button className="quiet">+ Adicionar</button></div>
-            <div className="runList">
-              <RunItem type="LOUVOR" title="Bondade de Deus" detail="Refrão" icon={<Music2 size={17}/>} status="Próximo" />
-              <RunItem type="BÍBLIA" title="João 3:16" detail="NAA" icon={<BookOpen size={17}/>} />
-              <RunItem type="GC" title="Pr. Rafael Martins" detail="Pastor convidado" icon={<UserRound size={17}/>} />
-              <RunItem type="OFERTA" title="Dízimos e ofertas" detail="PIX + QR Code" icon={<CircleDollarSign size={17}/>} />
-              <RunItem type="AVISO" title="Conferência City" detail="18–20 de setembro" icon={<Megaphone size={17}/>} />
-            </div>
-          </section>
-
-          <section className="previewPanel">
-            <div className="sectionTitle"><div><p className="eyebrow">PREVIEW</p><h2>Saída do GC</h2></div><span className="resolution">1920 × 1080</span></div>
-            <div className="screen">
-              <div className="screenTag"><MonitorPlay size={14}/> PREVIEW</div>
-              <div className="lowerThird"><small>PRÓXIMO</small><strong>Bondade de Deus</strong><span>Refrão</span></div>
-            </div>
-            <div className="previewMeta"><div><span>Selecionado</span><strong>Bondade de Deus · Refrão</strong></div><button className="edit">Editar conteúdo</button></div>
-          </section>
-        </div>
-
-        <section className="livebar">
-          <div className="onair"><span className={live ? "liveDot live" : "liveDot"}/><div><small>NO AR</small><strong>{live ? "Bondade de Deus · Refrão" : "Nenhum GC no ar"}</strong></div></div>
-          <div className="controls"><button>← Anterior</button><button className={live ? "danger" : "primary"} onClick={() => setLive(!live)}>{live ? "Tirar do ar" : "Colocar no ar"}</button><button>Próximo →</button></div>
-          <div className="shortcut"><kbd>Espaço</kbd><span>colocar / tirar</span></div>
-        </section>
-      </section>
-    </main>
-  );
+export default function Home(){
+ const[active,setActive]=useState("Culto"),[live,setLive]=useState(false),[mode,setMode]=useState<"preparacao"|"culto">("preparacao"),[items,setItems]=useState<Item[]>(initial),[selected,setSelected]=useState(0),[vmix,setVmix]=useState<"offline"|"checking"|"online">("offline");
+ const current=items[selected]||items[0];
+ useEffect(()=>{const key=(e:KeyboardEvent)=>{if((e.target as HTMLElement)?.tagName==="INPUT"||(e.target as HTMLElement)?.tagName==="TEXTAREA")return;if(e.code==="Space"){e.preventDefault();setLive(v=>!v)}if(e.key==="ArrowRight")setSelected(i=>Math.min(i+1,items.length-1));if(e.key==="ArrowLeft")setSelected(i=>Math.max(i-1,0))};window.addEventListener("keydown",key);return()=>window.removeEventListener("keydown",key)},[items.length]);
+ async function testVmix(){setVmix("checking");try{const r=await fetch("/api/vmix");setVmix(r.ok?"online":"offline")}catch{setVmix("offline")}}
+ function add(item:Item){setItems(v=>[...v,item]);setSelected(items.length);setActive("Culto")}
+ return <main className={`shell ${mode==="culto"?"cultoMode":""}`}>
+  <aside className="sidebar"><div className="brand"><span className="brandMark">c</span><strong>church gc</strong></div><nav>{nav.map(([label,Icon])=><button key={label} className={active===label?"nav active":"nav"} onClick={()=>setActive(label)}><Icon size={18}/><span>{label}</span></button>)}</nav><div className="sideBottom"><button className="nav" onClick={()=>setActive("Configurações")}><Settings2 size={18}/><span>Configurações</span></button><button className="connection connectionButton" onClick={testVmix}><span className={`dot ${vmix}`}/><div><strong>{vmix==="online"?"vMix conectado":vmix==="checking"?"Verificando…":"Conectar ao vMix"}</strong><small>Rede local · porta 8088</small></div></button></div></aside>
+  <section className="workspace"><header><div><p className="eyebrow">CULTO DE DOMINGO</p><h1>{active}</h1></div><div className="headerActions"><span className="network"><Wifi size={15}/> Rede local</span><div className="mode"><button className={mode==="preparacao"?"selected":""} onClick={()=>setMode("preparacao")}>Preparação</button><button className={mode==="culto"?"selected":""} onClick={()=>setMode("culto")}>Modo culto</button></div></div></header>
+  {active==="Culto"?<Culto items={items} selected={selected} setSelected={setSelected} current={current}/>:<Module active={active} add={add} testVmix={testVmix} vmix={vmix}/>} 
+  <section className="livebar"><div className="onair"><span className={live?"liveDot live":"liveDot"}/><div><small>NO AR</small><strong>{live?`${current.title} · ${current.detail}`:"Nenhum GC no ar"}</strong></div></div><div className="controls"><button onClick={()=>setSelected(i=>Math.max(i-1,0))}>← Anterior</button><button className={live?"danger":"primary"} onClick={()=>setLive(!live)}>{live?"Tirar do ar":"Colocar no ar"}</button><button onClick={()=>setSelected(i=>Math.min(i+1,items.length-1))}>Próximo →</button></div><div className="shortcut"><kbd>Espaço</kbd><span>colocar / tirar</span></div></section>
+  </section></main>
 }
 
-function RunItem({ type, title, detail, icon, status }: {type:string; title:string; detail:string; icon:React.ReactNode; status?:string}) {
-  return <button className="runItem"><span className="drag">⋮⋮</span><span className="itemIcon">{icon}</span><div><small>{type}</small><strong>{title}</strong><span>{detail}</span></div>{status && <em>{status}</em>}</button>;
-}
+function Culto({items,selected,setSelected,current}:{items:Item[];selected:number;setSelected:(n:number)=>void;current:Item}){return <div className="contentGrid"><section className="runPanel"><div className="sectionTitle"><div><p className="eyebrow">ROTEIRO</p><h2>Próximos do culto</h2></div><span className="resolution">{items.length} itens</span></div><div className="runList">{items.map((x,i)=><button key={i} className={`runItem ${selected===i?"chosen":""}`} onClick={()=>setSelected(i)}><span className="drag">⋮⋮</span><span className="itemIcon">{iconFor(x.type)}</span><div><small>{x.type}</small><strong>{x.title}</strong><span>{x.detail}</span></div>{selected===i&&<em>Preview</em>}</button>)}</div></section><Preview item={current}/></div>}
+function Preview({item}:{item:Item}){return <section className="previewPanel"><div className="sectionTitle"><div><p className="eyebrow">PREVIEW</p><h2>Saída do GC</h2></div><span className="resolution">1920 × 1080</span></div><div className="screen"><div className="screenTag"><MonitorPlay size={14}/> PREVIEW</div><div className="lowerThird"><small>{item.type}</small><strong>{item.title}</strong><span>{item.body||item.detail}</span></div></div><div className="previewMeta"><div><span>Selecionado</span><strong>{item.title} · {item.detail}</strong></div><span className="resolution">Preview seguro antes do ar</span></div></section>}
+function Module({active,add,testVmix,vmix}:{active:string;add:(i:Item)=>void;testVmix:()=>void;vmix:string}){if(active==="Configurações")return <div className="module"><p className="eyebrow">INTEGRAÇÃO</p><h2>vMix na rede local</h2><p className="help">O Bridge usa o endereço configurado no servidor para conversar com a API do vMix sem expor o computador de transmissão à internet.</p><div className="settingsCard"><label>Host do vMix<input value="VMIX_HOST (servidor)" disabled/></label><label>Porta<input value="8088" disabled/></label><button className="primaryAction" onClick={testVmix}>{vmix==="checking"?"Testando…":"Testar conexão"}</button></div></div>;
+ if(active==="Biblioteca")return <div className="module"><p className="eyebrow">TEMPLATES</p><h2>Biblioteca visual</h2><p className="help">Os primeiros modelos serão organizados por uso, não por nomes técnicos.</p><div className="templateGrid"><Template name="Lower clean"/><Template name="Versículo amplo"/><Template name="Oferta + QR"/><Template name="Aviso compacto"/></div></div>;
+ const map:Record<string,{title:string;fields:string[];type:string}>={"GC":{title:"Novo GC de pessoa",fields:["Nome","Função / cargo"],type:"GC"},"Bíblia":{title:"Preparar texto bíblico",fields:["Referência","Texto"],type:"BÍBLIA"},"Louvor":{title:"Adicionar trecho de louvor",fields:["Música","Trecho / seção"],type:"LOUVOR"},"Oferta":{title:"Preparar oferta",fields:["Título","PIX / instrução"],type:"OFERTA"},"Avisos":{title:"Criar aviso",fields:["Título","Data / informação"],type:"AVISO"}};const cfg=map[active]||map.GC;return <Composer cfg={cfg} add={add}/>}
+function Composer({cfg,add}:{cfg:{title:string;fields:string[];type:string};add:(i:Item)=>void}){const[a,setA]=useState(""),[b,setB]=useState("");return <div className="module"><div className="sectionTitle"><div><p className="eyebrow">PREPARAÇÃO</p><h2>{cfg.title}</h2></div><span className="resolution">2 passos</span></div><div className="composer"><div className="form"><label>{cfg.fields[0]}<input autoFocus value={a} onChange={e=>setA(e.target.value)} placeholder={`Digite ${cfg.fields[0].toLowerCase()}`}/></label><label>{cfg.fields[1]}<textarea value={b} onChange={e=>setB(e.target.value)} placeholder={`Digite ${cfg.fields[1].toLowerCase()}`}/></label><button className="primaryAction" disabled={!a.trim()} onClick={()=>add({type:cfg.type,title:a,detail:b||"Pronto para exibir",body:b})}><Plus size={16}/>Adicionar ao culto</button></div><div className="miniPreview"><p>PREVIEW</p><div><small>{cfg.type}</small><strong>{a||"Seu conteúdo aparece aqui"}</strong><span>{b||"Preencha os campos para visualizar."}</span></div></div></div></div>}
+function Template({name}:{name:string}){return <button className="template"><div className="templateScreen"><span/></div><strong>{name}</strong><small>16:9 · GC</small></button>}
+function iconFor(t:string){if(t==="BÍBLIA")return <BookOpen size={17}/>;if(t==="LOUVOR")return <Music2 size={17}/>;if(t==="OFERTA")return <CircleDollarSign size={17}/>;if(t==="AVISO")return <Megaphone size={17}/>;return <UserRound size={17}/>}
